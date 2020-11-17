@@ -3,7 +3,8 @@ const { join } = require('path')
 const glob = require('glob')
 const { readFile, writeFile, exists } = require('fs-extra')
 const { JSDOM } = require('jsdom')
-const translate = require('@k3rn31p4nic/google-translate-api')
+// const translate = require('@k3rn31p4nic/google-translate-api')
+const translatte = require('translatte')
 
 module.exports = async function (targetLanguage) {
   const translatedFolder = join(__dirname, '..', 'translated')
@@ -75,7 +76,7 @@ module.exports = async function (targetLanguage) {
     }
     for (let i = 0; i < retry; i++) {
       try {
-        let { text } = await translate(txt, { to })
+        let { text } = await translatte(txt, { to })
         cache[to][txt] = text
         await writeJSON(cacheFile, cache)
         return text
