@@ -3,8 +3,8 @@ const { join } = require('path')
 const glob = require('glob')
 const { readFile, writeFile, exists } = require('fs-extra')
 const { JSDOM } = require('jsdom')
-// const translate = require('@k3rn31p4nic/google-translate-api')
-const translatte = require('translatte')
+const translatte = require('@k3rn31p4nic/google-translate-api')
+// const translatte = require('translatte')
 
 module.exports = async function (targetLanguage) {
   const translatedFolder = join(__dirname, '..', 'translated')
@@ -71,6 +71,7 @@ module.exports = async function (targetLanguage) {
   }
 
   async function translateWithRetry(txt, to, retry = 10) {
+    await waitMiliSec(2000)
     if (!cache[to]) {
       cache[to] = {}
     }
@@ -86,4 +87,8 @@ module.exports = async function (targetLanguage) {
     }
     throw `retry translate reach max ${retry}, when translating [${txt}] into ${to}`
   }
+}
+
+function waitMiliSec(mili) {
+  return new Promise(resolve => setTimeout(resolve, mili))
 }
