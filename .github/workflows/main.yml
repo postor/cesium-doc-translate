@@ -28,8 +28,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.sha::8 }}
-          release_name: Release ${{ github.sha::8 }}
+          tag_name: ${GITHUB_SHA::8}
+          release_name: ${GITHUB_SHA::8}
           body: auto release from action
           draft: false
           prerelease: false
