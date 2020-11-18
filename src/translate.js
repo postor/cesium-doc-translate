@@ -3,8 +3,9 @@ const { join } = require('path')
 const glob = require('glob')
 const { readFile, writeFile, exists } = require('fs-extra')
 const { JSDOM } = require('jsdom')
-const translatte = require('@k3rn31p4nic/google-translate-api')
+const translate = require('@postor/google-translate-api')
 // const translatte = require('translatte')
+const { retry, proxify } = require('@postor/google-translate-api/src/proxify')
 
 module.exports = async function (targetLanguage) {
   const translatedFolder = join(__dirname, '..', 'translated')
@@ -12,6 +13,8 @@ module.exports = async function (targetLanguage) {
   const targetFolder = join(translatedFolder, targetLanguage)
   const cacheFile = join(__dirname, '..', 'cache.json')
   const cache = await exists(cacheFile) ? await readJSON(cacheFile) : {}
+
+  const translatte = retry(await proxify(translate), 100)
   // copy
   await copy(join(__dirname, '..', 'cesiumjs-ref-doc'), targetFolder)
 
@@ -70,7 +73,7 @@ module.exports = async function (targetLanguage) {
     return translated
   }
 
-  async function translateWithRetry(txt, to, retry = 10) {
+  async function translateWithRetry(txt, to, retry = 100) {
     await waitMiliSec(2000)
     if (!cache[to]) {
       cache[to] = {}
