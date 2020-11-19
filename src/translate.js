@@ -3,9 +3,10 @@ const { join } = require('path')
 const glob = require('glob')
 const { readFile, writeFile, exists } = require('fs-extra')
 const { JSDOM } = require('jsdom')
-const translate = require('@postor/google-translate-api')
-// const translatte = require('translatte')
-const { retry, proxify } = require('@postor/google-translate-api/src/proxify')
+// const translate = require('@postor/google-translate-api')
+const translatte = require('./baidu')
+// const { retry, proxify } = require('@postor/google-translate-api/src/proxify')
+
 
 module.exports = async function (targetLanguage) {
   const translatedFolder = join(__dirname, '..', 'translated')
@@ -14,7 +15,6 @@ module.exports = async function (targetLanguage) {
   const cacheFile = join(__dirname, '..', 'cache.json')
   const cache = await exists(cacheFile) ? await readJSON(cacheFile) : {}
 
-  const translatte = retry(await proxify(translate), 100)
   // copy
   await copy(join(__dirname, '..', 'cesiumjs-ref-doc'), targetFolder)
 
@@ -24,11 +24,24 @@ module.exports = async function (targetLanguage) {
     let html = await readFile(htmlFile)
     let dom = new JSDOM(html)
     let { document } = dom.window
-    for (let selector of ['.description', '.param-desc']) {
-      for (let desc of document.querySelectorAll(selector)) {
+    let translatedClassName = 'js-translated'
+    let selector = `.description:not(.${translatedClassName}), .param-desc:not(.${translatedClassName})`
+
+    let unhandled = [...document.querySelectorAll(selector)], tmp = []
+
+    while (unhandled.length) {
+      tmp = []
+      for (let desc of unhandled) {
+        if (desc.querySelectorAll(selector).length) {
+          tmp.push(desc)
+          continue
+        }
         desc.innerHTML = await trans(desc, targetLanguage)
+        desc.className = desc.className + ' ' + translatedClassName
       }
+      unhandled = tmp
     }
+
     await writeFile(htmlFile, dom.serialize())
     console.log(`${htmlFile} to ${targetLanguage} done!`)
     // process.exit()
@@ -56,7 +69,8 @@ module.exports = async function (targetLanguage) {
       , domTxt = dom.textContent
     for (let n of dom.children) {
       txts.push(n.textContent)
-      htms.push(n.innerHTML)
+      htms.push(n.outerHTML)
+      num++
       while (domTxt.includes(num)) {
         num++
       }
@@ -73,19 +87,25 @@ module.exports = async function (targetLanguage) {
     return translated
   }
 
-  async function translateWithRetry(txt, to, retry = 100) {
-    await waitMiliSec(2000)
+  async function translateWithRetry(txt1, to, retry = 100) {
+    let txt = txt1.trim()
+    if (!txt) return txt
     if (!cache[to]) {
       cache[to] = {}
     }
+    if (cache[to][txt1]) return cache[to][txt1]
+    if (cache[to][txt]) return cache[to][txt]
+    await waitMiliSec(100)
     for (let i = 0; i < retry; i++) {
       try {
-        let { text } = await translatte(txt, { to })
+        // let { text } = await translatte(txt, { to })
+        let text = await translatte(txt, to)
         cache[to][txt] = text
-        await writeJSON(cacheFile, cache)
+        await writeJSON(cacheFile, cache, { spaces: 2 })
+        console.log(`translated！[${txt}]`)
         return text
       } catch (e) {
-        console.log('failed translting, retrying', e)
+        console.log('failed translting, retrying', e, txt)
       }
     }
     throw `retry translate reach max ${retry}, when translating [${txt}] into ${to}`
